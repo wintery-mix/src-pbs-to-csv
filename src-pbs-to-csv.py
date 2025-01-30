@@ -25,7 +25,7 @@ def getNextUri(response):
 
 def getAllRuns(userid):
   url = "https://www.speedrun.com/api/v1/runs?user=" + userid + "&embed=game,category,region,platform,players"
-  alldf = pd.DataFrame()
+  df_list = []
   while url != None:
     print(".", end ="")
     response = requests.get(url).json()
@@ -34,9 +34,10 @@ def getAllRuns(userid):
     if df.shape[0] > 0:
       df['place'] = math.nan
       df.set_index('id', inplace=True)
-      alldf = alldf.append(df)
+      df_list.append(df)
     url = getNextUri(response)
-    alldf['place'] = math.nan
+  alldf = pd.concat(df_list)
+  alldf['place'] = math.nan
   print()
   return alldf
 
@@ -47,10 +48,11 @@ def getPBs(userid, all = False):
   pbdf = pbdf.join(pbdf['run'].apply(pd.Series), rsuffix='run')
   pbdf.set_index('id', inplace=True)
   pbdf.drop(axis=1, columns=['run'], inplace=True)
+  df_list = [pbdf]
   if all:
-    alldf = getAllRuns(userid)
-    pbdf = pbdf.append(alldf)
-    return pbdf
+    df = getAllRuns(userid)
+    df_list.append(df)
+    return pd.concat(df_list)
   return pbdf
 
 def getPlayers(x):
@@ -77,11 +79,13 @@ def getPlatform(x):
   else:
     return x.platform['data']['name']
 
+from time import sleep
 varMemo = {}
 def getVariable(variableid):
   if variableid not in varMemo:
     url = "https://www.speedrun.com/api/v1/variables/" + variableid
     response = requests.get(url)
+    sleep(.1)
     varMemo[variableid] = response.json()['data']
   return varMemo[variableid]
 
